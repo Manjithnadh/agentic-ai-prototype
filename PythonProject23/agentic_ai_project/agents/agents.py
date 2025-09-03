@@ -6,15 +6,15 @@ from PythonProject23.agentic_ai_project.tools.db_tool import query_sqlite_db
 from langchain_community.agent_toolkits import create_sql_agent
 
 from langchain_community.utilities import SQLDatabase
-
+from tools.RAG_tool import RagTool
 from PythonProject23.agentic_ai_project.tools import db_tool
 from dotenv import load_dotenv
 import os
 
-load_dotenv(dotenv_path=r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\.env")
+# load_dotenv(dotenv_path=r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\.env")
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
-print("Loaded GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY")[:8], "...")
+# print("Loaded GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY")[:8], "...")
 
 tools = query_sqlite_db
 
@@ -30,5 +30,3 @@ agent_executor=create_sql_agent(
 
 
 db_tool.agent_executor=agent_executor
-
-

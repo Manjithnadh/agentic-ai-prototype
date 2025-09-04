@@ -55,8 +55,3 @@ def query_sqlite_db(query: str) -> str:
     except Exception as e:
         return f"SQL Agent Error: {e}"
 
-query="what is the top 5 best rated drugs"
-
-a=agent_executor.run(query)
-
-print(a)

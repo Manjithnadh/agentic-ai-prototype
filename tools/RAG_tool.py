@@ -8,6 +8,7 @@ from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 load_dotenv()
+os.environ["USE_TF"] = "0"
 
 
 def load_and_split(file_path):
@@ -41,10 +42,10 @@ def load_vectorstore(db_path="faiss_index"):
 
 def build_qa(file_path=None, db_path="faiss_index"):
     """Build QA chain with Gemini + FAISS"""
-    # Use existing FAISS if available, else create new
     if file_path:
         vectorstore = create_vectorstore(file_path, db_path)
     else:
+        # fallback: load an existing index
         vectorstore = load_vectorstore(db_path)
 
     llm = ChatGoogleGenerativeAI(
@@ -54,17 +55,22 @@ def build_qa(file_path=None, db_path="faiss_index"):
     return RetrievalQA.from_chain_type(llm=llm, retriever=vectorstore.as_retriever())
 
 
+# ✅ Exportable function for agents.py
+def get_qa_chain(file_path=None, db_path="faiss_index"):
+    """If no file is provided, try to use existing FAISS index"""
+    return build_qa(file_path, db_path)
+
+
 if __name__ == "__main__":
-    # Build the QA chain
-    qa_chain = build_qa(file_path="../data/Frontend_JD.pdf")  # or None to load existing FAISS
-    
+    # Run standalone chatbot
+    qa_chain = get_qa_chain("../data/Frontend_JD.pdf")
+
     print("RAG Chatbot ready! Type 'exit' to quit.\n")
     while True:
         query = input("You: ")
         if query.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
-        
+
         result = qa_chain({"query": query})
         print("Bot:", result["result"])
-

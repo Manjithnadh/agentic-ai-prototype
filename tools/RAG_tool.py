@@ -11,6 +11,7 @@ load_dotenv()
 
 
 def load_and_split(file_path):
+    
     """Load file and split into chunks"""
     if file_path.endswith(".pdf"):
         loader = PyPDFLoader(file_path)

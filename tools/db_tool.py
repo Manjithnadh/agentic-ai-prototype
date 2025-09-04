@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 import os
 from langchain.tools import tool
 
-load_dotenv(dotenv_path=r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\.env")
+load_dotenv(dotenv_path=r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\PythonProject23\agentic_ai_project\.env")
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
 
@@ -55,3 +55,8 @@ def query_sqlite_db(query: str) -> str:
     except Exception as e:
         return f"SQL Agent Error: {e}"
 
+query="what is the top 5 best rated drugs"
+
+a=agent_executor.run(query)
+
+print(a)

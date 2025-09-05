@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from agents.agents import app as agent_app, set_qa_chain
+from agents1 import app as agent_app, set_qa_chain
 
 # -------------------- Streamlit Page Setup --------------------
 st.set_page_config(page_title="Agentic AI Assistant", layout="centered")

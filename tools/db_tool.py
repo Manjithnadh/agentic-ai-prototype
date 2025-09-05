@@ -4,9 +4,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_community.utilities import SQLDatabase
 from langchain.agents import AgentType
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # -------------------- Initialize LLM --------------------
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.getenv("GOOGLE_API_KEY"))
 
 # -------------------- Load CSV into SQLite --------------------
 def load_csv_to_sql(file_path: str, db_path: str = "drug_data.db"):

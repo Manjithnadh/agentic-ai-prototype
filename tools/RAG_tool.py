@@ -6,6 +6,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+from dotenv import load_dotenv
+import os
+load_dotenv()
+
 # -------------------- Load & Split Documents --------------------
 def load_and_split(file_path: str):
     """Load a file (PDF or TXT) and split into chunks."""
@@ -40,7 +44,7 @@ def build_qa(file_path: str = None, db_path: str = "faiss_index"):
     else:
         vectorstore = load_vectorstore(db_path)
 
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.getenv("GOOGLE_API_KEY"))
     return RetrievalQA.from_chain_type(llm=llm, retriever=vectorstore.as_retriever())
 
 # -------------------- Exportable function --------------------

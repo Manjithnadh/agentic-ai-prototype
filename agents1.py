@@ -1,25 +1,18 @@
 import os
-import os
-from dotenv import load_dotenv
-load_dotenv()
-google_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_creds
-
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, END
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
-
 from tools.db_tool import agent_executor
 from tools.RAG_tool import get_qa_chain
 from tools.Fallback_tool import fallback_chain
 
+load_dotenv()
 
 
-
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)

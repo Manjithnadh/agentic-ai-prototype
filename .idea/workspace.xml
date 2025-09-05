@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="06547a0f-daa1-4434-9c44-bd3cc10ce199" name="Changes" comment="commit" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="Manjithnadhgit config --global user.email manjithmullapudi@GMAIL.comgit config --global user.name Manjithnadh &lt;manjithmullapudi@gmail.com&gt;" />
+      </list>
+    </option>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$/PythonProject23/agentic_ai_project" value="main" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/agentic-ai-prototype" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Manjithnadh&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Manjithnadh/agentic-ai-prototype.git&quot;,
+    &quot;accountId&quot;: &quot;b095334c-e57d-48a0-a85a-d7c1bb1c25d1&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="328ksh4baK4LVYTZpoapEb49zrQ" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.Fallback_tool.executor": "Run",
+    "Python.RAG_tool.executor": "Run",
+    "Python.agents.executor": "Run",
+    "Python.app.executor": "Run",
+    "Python.db_tool.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\PythonProject23\agentic_ai_project" />
+      <recent name="C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\PythonProject23\agentic_ai_project\tools" />
+      <recent name="C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-f78a9d071105-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.26574.90" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="06547a0f-daa1-4434-9c44-bd3cc10ce199" name="Changes" comment="" />
+      <created>1756809794685</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1756809794685</updated>
+    </task>
+    <task id="LOCAL-00001" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756816342157</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1756816342157</updated>
+    </task>
+    <task id="LOCAL-00002" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756816361338</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1756816361338</updated>
+    </task>
+    <task id="LOCAL-00003" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756816389719</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1756816389719</updated>
+    </task>
+    <task id="LOCAL-00004" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756889816452</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1756889816452</updated>
+    </task>
+    <task id="LOCAL-00005" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756890007639</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1756890007639</updated>
+    </task>
+    <task id="LOCAL-00006" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756890056093</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1756890056093</updated>
+    </task>
+    <task id="LOCAL-00007" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756890445591</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1756890445591</updated>
+    </task>
+    <task id="LOCAL-00008" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756974321771</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1756974321771</updated>
+    </task>
+    <task id="LOCAL-00009" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756975015137</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1756975015137</updated>
+    </task>
+    <task id="LOCAL-00010" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756979363114</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1756979363117</updated>
+    </task>
+    <task id="LOCAL-00011" summary="commit">
+      <option name="closed" value="true" />
+      <created>1756990341946</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1756990341946</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="commit" />
+  </component>
+</project>

@@ -1,6 +1,9 @@
 import os
-os.environ[
-    "GOOGLE_APPLICATION_CREDENTIALS"] = r"C:\Users\Manjith.Mullapudi\Downloads\gen-lang-client-0647624512-1e317509388c.json"
+import os
+from dotenv import load_dotenv
+load_dotenv()
+google_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_creds
 
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI

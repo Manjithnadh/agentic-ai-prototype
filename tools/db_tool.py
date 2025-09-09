@@ -10,7 +10,7 @@ load_dotenv()
 
 DB_PATH = "drug_data.db"
 TABLE_NAME = "drugs"
-CSV_PATH = r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\data\Medicine_Details.csv" 
+CSV_PATH = "data\Medicine_Details.csv" 
 
 # -------------------- Initialize LLM --------------------
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, api_key=os.getenv("GOOGLE_API_KEY"))

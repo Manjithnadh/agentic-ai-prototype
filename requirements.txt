@@ -100,3 +100,4 @@ zstandard==0.24.0
 langchain-huggingface
 pandas~=2.3.2
 langgraph~=0.4.3
+huggingface_hub==0.16.4

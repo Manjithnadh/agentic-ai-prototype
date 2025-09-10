@@ -1,13 +1,18 @@
 import os
+import asyncio
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
-
 from dotenv import load_dotenv
-import os
+
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    
 load_dotenv()
 
 # -------------------- Load & Split Documents --------------------
@@ -24,16 +29,22 @@ def load_and_split(file_path: str):
 
 # -------------------- FAISS Vectorstore --------------------
 def create_vectorstore(file_path: str, db_path: str = "faiss_index"):
-    """Build FAISS index from file."""
+    """Build FAISS index from file using HuggingFace inference api."""
     chunks = load_and_split(file_path)
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        model="models/embedding-001"
+        )
     vectorstore = FAISS.from_documents(chunks, embeddings)
     vectorstore.save_local(db_path)  # Save index for reuse
     return vectorstore
 
 def load_vectorstore(db_path: str = "faiss_index"):
     """Load saved FAISS index."""
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        model="models/embedding-001"
+    )
     return FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
 
 # -------------------- Build QA Chain --------------------

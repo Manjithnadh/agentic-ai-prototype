@@ -1,31 +1,34 @@
-import pandas as pd
-import sqlite3
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.agent_toolkits import create_sql_agent
-from langchain_community.utilities import SQLDatabase
-from langchain.agents import AgentType
 import os
+import sqlite3
+import pandas as pd
 from dotenv import load_dotenv
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.utilities import SQLDatabase
+from langchain.agents import initialize_agent, AgentType
+from langchain.prompts import ChatPromptTemplate
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
+
 load_dotenv()
 
 DB_PATH = "drug_data.db"
 TABLE_NAME = "drugs"
-CSV_PATH = r"C:\Users\Manjith.Mullapudi\PycharmProjects\agentic-ai-prototype\data\Medicine_Details.csv" 
+CSV_PATH = "data\Medicine_Details.csv" 
 
-# -------------------- Initialize LLM --------------------
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, api_key=os.getenv("GOOGLE_API_KEY"))
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    temperature=0,
+    api_key=os.getenv("GOOGLE_API_KEY"),
+)
 
-# -------------------- Load CSV into SQLite --------------------
 def load_csv_to_sql(file_path: str, db_path: str = "drug_data.db"):
-    """Load a CSV file into a SQLite database."""
     df = pd.read_csv(file_path)
     conn = sqlite3.connect(db_path)
-    df.to_sql("drugs", conn, if_exists="replace", index=False)
+    df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
     conn.commit()
     conn.close()
 
 def database_exists(db_path: str, table_name: str) -> bool:
-    """Check if the database file and table already exist."""
     if not os.path.exists(db_path):
         return False
     try:
@@ -37,54 +40,66 @@ def database_exists(db_path: str, table_name: str) -> bool:
         return exists
     except:
         return False
-    
+
 if not database_exists(DB_PATH, TABLE_NAME):
     print("Database not found. Creating new database from CSV...")
     load_csv_to_sql(CSV_PATH, DB_PATH)
 else:
     print("Database already exists. Skipping CSV load.")
 
-# -------------------- Initialize SQL Database --------------------
+
 db = SQLDatabase.from_uri(f"sqlite:///{DB_PATH}")
 
-# -------------------- Initialize SQL Agent --------------------
-agent_executor = create_sql_agent(
+response_schemas = [
+    ResponseSchema(name="sql_query", description="The SQL query to run against the database"),
+    ResponseSchema(name="answer", description="Final user-friendly answer to the query"),
+]
+
+output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+format_instructions = output_parser.get_format_instructions()
+
+CUSTOM_SQL_PROMPT = ChatPromptTemplate.from_messages([
+    ("system",
+     """You are a helpful assistant that translates natural language questions into SQL queries 
+     for a SQLite database. 
+
+     Always respond ONLY in JSON with the following keys:
+     - sql_query: the SQL query to run
+     - answer: a clear and concise natural language answer based on the query results
+
+     {format_instructions}
+     """),
+    ("human", "{input}")
+])
+
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
+
+
+db = SQLDatabase.from_uri(f"sqlite:///{DB_PATH}")
+
+sql_tool = QuerySQLDatabaseTool(db=db)
+
+agent_executor = initialize_agent(
+    tools=[sql_tool],  
     llm=llm,
-    db=db,
-    agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,
-    handle_parsing_errors=True,  # This is already set, but keep it
-    max_iterations=10,
-    early_stopping_method="force",
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    prompt=CUSTOM_SQL_PROMPT,
+    handle_parsing_errors=True,
 )
 
-# -------------------- Enhanced helper with better error handling --------------------
+
 def query_sqlite_db(user_query: str) -> str:
-    """Executes a query via the SQL agent and returns a user-friendly response."""
     try:
         result = agent_executor.run(user_query)
-        return result
+        parsed = output_parser.parse(result)
+        sql = parsed.get("sql_query", "")
+        ans = parsed.get("answer", "")
+        return f"SQL: {sql}\nAnswer: {ans}"
     except Exception as e:
-        # Check if it's an output parsing error
-        error_str = str(e)
-        if "Could not parse LLM output" in error_str:
-            # Extract the actual useful response from the error message
-            if "This is the error:" in error_str:
-                # Extract the part after "This is the error:"
-                useful_output = error_str.split("This is the error:")[1].strip()
-                # Remove the backticks if present
-                useful_output = useful_output.replace("`", "")
-                return useful_output
-            else:
-                return "I found some information, but had trouble formatting it. Please try asking more specifically."
-        elif "ValueError" in error_str:
-            return "I couldn't process that question. Could you try rephrasing it?"
-        else:
-            return f"An unexpected error occurred: {error_str}"
+        return f"Error occurred: {e}"
 
-# -------------------- Test the agent --------------------
 if __name__ == "__main__":
     test_query = "What are the uses of some common drugs?"
     print(f"Query: {test_query}")
     result = query_sqlite_db(test_query)
-    print(f"Result: {result}")
+    print(f"Result:\n{result}")

@@ -1,4 +1,10 @@
 import os
+import asyncio
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    
 import streamlit as st
 from agents.agents1 import app as agent_app, set_qa_chain
 

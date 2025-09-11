@@ -53,33 +53,29 @@ def set_qa_chain(file_path):
 
 
 def router(state: dict):
-    """Enhanced router with better medicine detection and priority handling."""
-    query = state.get("query", "").lower()
+    """AI-driven router using Gemini instead of keyword lists."""
+    query = state.get("query", "")
+
+    routing_prompt = f"""
+    You are a router that decides where to send a user query.
     
-    # Medicine-related keywords (expanded list)
-    medicine_keywords = [
-        "drug", "medicine", "medication", "pill", "tablet", "capsule", 
-        "prescription", "dose", "dosage", "pharmacy", "pharmaceutical",
-        "treatment", "therapy", "symptom", "diagnosis", "health", "medical",
-        "patient", "illness", "disease", "condition", "pain", "fever",
-        "infection", "antibiotic", "vaccine", "injection", "side effect",
-        "contraindication", "interaction", "generic", "brand", "mg", "ml"
-    ]
-    
-    # Check if query is medicine-related
-    is_medicine_related = any(keyword in query for keyword in medicine_keywords)
-    
-    # Priority: SQL for medicine queries, then RAG if available, then fallback
-    if is_medicine_related:
-        return "sql"
-    elif qa_chain is not None:
-        # Additional check: if RAG chain is specifically relevant
-        rag_keywords = ["document", "file", "upload", "pdf", "text", "content"]
-        has_rag_context = any(keyword in query for keyword in rag_keywords)
-        if has_rag_context or not is_medicine_related:
-            return "rag"
-    
-    return "fallback"
+    Tools available:
+    - "sql": for medicine, drugs, prescriptions, dosage, side effects, or health-related queries.
+    - "rag": for queries about uploaded documents, PDFs, files, or text content.
+    - "fallback": for general conversation or anything else.
+
+    User query: {query}
+
+    Answer with only one word: sql, rag, or fallback.
+    """
+
+    decision = llm.predict(routing_prompt).strip().lower()
+
+    # sanitize
+    if decision not in ["sql", "rag", "fallback"]:
+        decision = "fallback"
+
+    return decision
 
 
 def route_node(state: dict):

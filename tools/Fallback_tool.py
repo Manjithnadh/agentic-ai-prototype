@@ -12,11 +12,14 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.
 fallback_prompt = PromptTemplate(
     input_variables=["query"],
     template="""
-You are a polite assistant. 
-The user asked: "{query}"
+You are a polite fallback assistant.
 
-If the query is not related to medicines, drugs, or knowledge from the RAG agent,
-respond with: "I’m sorry, I can only answer queries related to medicines or drug information."
+The user said: "{query}"
+
+Rules:
+- If the message is a greeting or wish (hi, hello, hey, good morning, good night, happy birthday, etc.), reply politely with a suitable greeting or wish back.
+- If the message is not about medicines, drugs, greetings, or wishing, always respond with:
+  Im sorry, I can only answer queries related to medicines or drug information.
 """
 )
 

@@ -8,12 +8,16 @@ from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
+from langchain_openai import OpenAIEmbeddings
+
 try:
     asyncio.get_running_loop()
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
     
 load_dotenv()
+
+
 
 # -------------------- Load & Split Documents --------------------
 def load_and_split(file_path: str):
@@ -31,20 +35,14 @@ def load_and_split(file_path: str):
 def create_vectorstore(file_path: str, db_path: str = "faiss_index"):
     """Build FAISS index from file using HuggingFace inference api."""
     chunks = load_and_split(file_path)
-    embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=os.getenv("GOOGLE_API_KEY"),
-        model="models/embedding-001"
-        )
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     vectorstore = FAISS.from_documents(chunks, embeddings)
     vectorstore.save_local(db_path)  # Save index for reuse
     return vectorstore
 
 def load_vectorstore(db_path: str = "faiss_index"):
     """Load saved FAISS index."""
-    embeddings = GoogleGenerativeAIEmbeddings(
-        google_api_key=os.getenv("GOOGLE_API_KEY"),
-        model="models/embedding-001"
-    )
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     return FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
 
 # -------------------- Build QA Chain --------------------

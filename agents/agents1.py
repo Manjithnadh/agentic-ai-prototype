@@ -13,7 +13,7 @@ load_dotenv()
 
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.getenv("GOOGLE_API_KEY"))
-
+  
 
 memory = ConversationSummaryBufferMemory(
     llm=llm,
@@ -53,29 +53,28 @@ def set_qa_chain(file_path):
 
 
 def router(state: dict):
-    """AI-driven router using Gemini instead of keyword lists."""
-    query = state.get("query", "")
+    query = state.get("query", "").lower()
 
-    routing_prompt = f"""
-    You are a router that decides where to send a user query.
-    
-    Tools available:
-    - "sql": for medicine, drugs, prescriptions, dosage, side effects, or health-related queries.
-    - "rag": for queries about uploaded documents, PDFs, files, or text content.
-    - "fallback": for general conversation or anything else.
+    # Keywords tied to your medicine database schema
+    sql_keywords = [
+        "medicine", "drug", "tablet", "injection", "capsule",
+        "composition", "uses", "side effect", "side_effects",
+        "manufacturer", "review", "rating", "percentage", 
+        "efficacy", "best", "drugs", "fever", "cancer", "dose", "dosage"
+    ]
 
-    User query: {query}
+    # ✅ Force all medicine-related queries → SQL first
+    if any(word in query for word in sql_keywords):
+        return "sql"
 
-    Answer with only one word: sql, rag, or fallback.
-    """
+    # ✅ If not medicine-related but file uploaded → RAG
+    if qa_chain is not None:
+        test_answer = qa_chain.run(query)
+        if test_answer and "not found" not in test_answer.lower() and "don't know" not in test_answer.lower():
+            return "rag"
 
-    decision = llm.predict(routing_prompt).strip().lower()
-
-    # sanitize
-    if decision not in ["sql", "rag", "fallback"]:
-        decision = "fallback"
-
-    return decision
+    # ✅ Everything else → fallback
+    return "fallback"
 
 
 def route_node(state: dict):
@@ -84,6 +83,34 @@ def route_node(state: dict):
 
 
 # -------------------- Agent Nodes --------------------
+
+def rag_node(state):
+    """RAG Agent node with auto-fallback when answer is not found."""
+    if qa_chain is None:
+        return {"response": "Please upload a document first using the upload feature."}
+
+    try:
+        history_text = get_chat_history_text()
+        enhanced_query = f"Based on our conversation: {history_text}\n\nNow: {state['query']}"
+        response = qa_chain.run(enhanced_query)
+
+        # ✅ Detect failure
+        if not response.strip() or "don't know" in response.lower() or "not found" in response.lower() or "cannot answer" in response.lower():
+            # Check if it's drug-related → SQL
+            drug_keywords = ["medicine", "drug", "tablet", "capsule", "injection", "review", "rating", "side effect", "composition", "uses", "manufacturer", "best"]
+            if any(word in state["query"].lower() for word in drug_keywords):
+                return sql_node(state)
+            else:
+                return fallback_node(state)
+
+        memory.save_context({"input": state["query"]}, {"output": response})
+        return {"response": response}
+
+    except Exception as e:
+        return {"response": f"Error processing your document query: {str(e)}"}
+
+
+
 def sql_node(state):
     """SQL Agent node with enhanced error handling and context."""
     try:
@@ -100,21 +127,6 @@ def sql_node(state):
         return {"response": error_msg}
 
 
-def rag_node(state):
-    """RAG Agent node with better context handling."""
-    if qa_chain is None:
-        return {"response": "Please upload a document first using the upload feature."}
-    
-    try:
-        history_text = get_chat_history_text()
-        enhanced_query = f"Based on our conversation: {history_text}\n\nNow: {state['query']}"
-        
-        response = qa_chain.run(enhanced_query)
-        memory.save_context({"input": state["query"]}, {"output": response})
-        return {"response": response}
-    
-    except Exception as e:
-        return {"response": f"Error processing your document query: {str(e)}"}
 
 def fallback_node(state):
     """Fallback Agent node with context awareness."""

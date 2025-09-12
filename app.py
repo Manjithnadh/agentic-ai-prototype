@@ -206,14 +206,20 @@ if user_input:
     with st.spinner("🤖 Processing your request..."):
         try:
             result = agent_app.invoke({"query": user_input})
-            bot_reply = result["response"]
+            print("DEBUG result:", result)  # 👈 log output in terminal
             
-            # Add bot response to chat
+            if not isinstance(result, dict):
+                raise ValueError(f"Unexpected result type: {type(result)} -> {result}")
+
+            bot_reply = result.get("response", "⚠️ No response key in result")
             st.session_state.chat_history.append(("bot", bot_reply))
-            
+
         except Exception as e:
-            error_msg = "Sorry, I encountered an error processing your request. Please try again."
+            import traceback
+            print("ERROR TRACE:", traceback.format_exc())  # 👈 full error in terminal
+            error_msg = f"❌ Error: {str(e)}"
             st.session_state.chat_history.append(("bot", error_msg))
+
     
     # Rerun to update the chat display
     st.rerun()

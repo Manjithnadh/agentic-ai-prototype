@@ -43,10 +43,10 @@ def route_node(state):
                 filtering or numeric queries that can be answered from the structured database/CSV/tables.
 
         - "rag" → if the user asks about uploaded documents (PDF/TXT/DOCX), resumes, reports, research papers, 
-                or any unstructured text that is not part of the structured database. 
+                or any unstructured text that is not part of the structured database. and it is part of the uploaded documents
                 Examples: "what is in the resume", "summarize the document", "explain section 2 of the paper".
 
-        - "fallback" → if the query is chit-chat, personal questions (e.g. "who is Manjith"), or completely 
+        - "fallback" → if the query is chit-chat, personal questions,not related to both the tools present or completely 
                     unrelated to medicines or uploaded documents.
 
             Respond with only one: sql, rag, or fallback.

@@ -1,225 +1,143 @@
 import os
-import asyncio
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    
-import streamlit as st
-from agents.agents1 import app as agent_app, set_qa_chain
 
-# -------------------- Streamlit Page Setup --------------------
+
+import streamlit as st
+from agents.agents1 import app as agent_app, memory
+from tools.RAG_tool import  create_vectorstore,build_qa  # ✅ use qa_chain
+from langchain_openai import ChatOpenAI
+
+# ----------------- PAGE CONFIG -----------------
 st.set_page_config(
-    page_title="Medical AI Assistant", 
+    page_title="Medical AI Assistant",
     layout="wide",
     page_icon="⚕️",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for clean chat interface
-st.markdown("""
-<style>
-    .main {
-        padding: 0;
-    }
-    .header-container {
-        background: white;
-        padding: 1rem 2rem;
-        border-bottom: 1px solid #e0e0e0;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
-    .chat-container {
-        padding: 1rem 2rem;
-        max-height: calc(100vh - 180px);
-        overflow-y: auto;
-        margin-top: 20px;
-    }
-    .input-container {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: white;
-        padding: 1rem 2rem;
-        border-top: 1px solid #e0e0e0;
-        z-index: 100;
-    }
-    .sidebar-open .input-container {
-        left: 250px;
-    }
-    .sidebar-closed .input-container {
-        left: 0;
-    }
-    .user-message {
-        background-color: #e3f2fd;
-        padding: 12px 16px;
-        border-radius: 12px;
-        margin: 12px 0;
-        margin-left: 20%;
-        border: 1px solid #bbdefb;
-    }
-    .bot-message {
-        background-color: #f5f5f5;
-        padding: 12px 16px;
-        border-radius: 12px;
-        margin: 12px 0;
-        margin-right: 20%;
-        border: 1px solid #e0e0e0;
-    }
-    .message-content {
-        margin: 0;
-        line-height: 1.5;
-        color: #333;
-    }
-    /* Remove default Streamlit padding */
-    .stApp {
-        padding-top: 0;
-    }
-    /* Ensure main content is properly positioned */
-    .main .block-container {
-        padding-top: 0;
-        padding-bottom: 80px;
-    }
-    /* Welcome message styling */
-    .welcome-container {
-        text-align: center;
-        padding: 3rem 1rem;
-        color: #666;
-        margin-top: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# -------------------- JavaScript to detect sidebar state --------------------
-st.components.v1.html("""
-<script>
-function detectSidebarState() {
-    const sidebar = document.querySelector('[data-testid="stSidebar"]');
-    const inputContainer = document.querySelector('.input-container');
-    
-    if (sidebar && inputContainer) {
-        const isVisible = sidebar.offsetWidth > 0;
-        if (isVisible) {
-            inputContainer.classList.add('sidebar-open');
-            inputContainer.classList.remove('sidebar-closed');
-        } else {
-            inputContainer.classList.add('sidebar-closed');
-            inputContainer.classList.remove('sidebar-open');
-        }
-    }
-}
-setInterval(detectSidebarState, 100);
-window.addEventListener('load', detectSidebarState);
-</script>
-""", height=0)
-
-# -------------------- Sidebar for File Upload & Settings --------------------
+# ----------------- SIDEBAR -----------------
 with st.sidebar:
-    st.markdown('### ⚙️ System Configuration')
-    
-    # File Upload for RAG
-    st.markdown('#### 📄 Document Upload')
-    uploaded_file = st.file_uploader(
-        "Upload PDF/TXT for document queries", 
+    st.markdown("### ⚙️ System Configuration")
+
+    st.markdown("#### 📄 Document Upload")
+    uploaded_files = st.file_uploader(
+        "Upload PDF/TXT/DOCX files for document queries",
         type=["pdf", "txt", "docx"],
-        label_visibility="collapsed"
+        accept_multiple_files=True
     )
 
-    if uploaded_file:
-        with st.spinner("Processing document..."):
-            os.makedirs("uploaded_files", exist_ok=True)
-            file_path = os.path.join("uploaded_files", uploaded_file.name)
+    if uploaded_files:
+        os.makedirs("uploaded_files", exist_ok=True)
+        saved_paths = []
 
+        for uploaded_file in uploaded_files:
+            file_path = os.path.join("uploaded_files", uploaded_file.name)
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
+            saved_paths.append(file_path)
+            
 
-            set_qa_chain(file_path)
+        # ✅ Use your functions from RAG_tool
+            vectorstore = create_vectorstore("uploaded_files")
+            st.write("Number of chunks in vectorstore:", len(vectorstore.docstore._dict))# returns FAISS
+            qa = build_qa(vectorstore)                            # returns RetrievalQA
+            st.session_state.qa_chain = qa
+            
         
-        st.success(f"✅ **{uploaded_file.name}** uploaded successfully")
-    
+        st.success(f"✅ Uploaded {len(saved_paths)} files successfully")
+
     st.markdown("---")
-    
-    # System information
-    st.markdown('#### ℹ️ System Info')
+    st.markdown("#### ℹ️ System Info")
     st.caption("""
-    - **SQL Agent**: Medicine database queries
-    - **RAG Agent**: Document-based questions  
-    - **Fallback**: General responses
+    - **SQL Agent** → Medicine database queries  
+    - **RAG Agent** → Document-based questions  
+    - **Fallback** → General responses
     """)
-    
-    # Clear chat button
+
     if st.button("🔄 Clear Conversation"):
         st.session_state.chat_history = []
         st.rerun()
 
-# -------------------- Main Content Area --------------------
-# Header inside main container
+# ----------------- HEADER -----------------
 st.markdown("""
-<div class="header-container">
-    <h2 style="margin:0; color:#2c3e50; font-size:1.5rem;">Medical AI Assistant</h2>
-    <p style="margin:0; color:#7f8c8d; font-size:0.9rem;">Ask about medicines, documents, or general questions</p>
+<div class="header-container" style="
+    background:white; padding:1rem 2rem; border-bottom:1px solid #e0e0e0;
+    position:sticky; top:0; z-index:100;">
+    <h2 style="margin:0; color:#2c3e50;">⚕️ Medical AI Assistant</h2>
+    <p style="margin:0; color:#7f8c8d; font-size:0.9rem;">
+        Ask about medicines, uploaded documents, or general queries
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Initialize chat history
+# ----------------- CHAT HISTORY INIT -----------------
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Chat messages container
+# ----------------- CHAT DISPLAY -----------------
 chat_container = st.container()
 
 with chat_container:
-    # Display chat history
     if st.session_state.chat_history:
-        for i, (sender, msg) in enumerate(st.session_state.chat_history):
+        for sender, msg in st.session_state.chat_history:
             if sender == "user":
                 st.markdown(f"""
-                <div class="user-message">
-                    <p class="message-content"><strong>👤 You:</strong> {msg}</p>
+                <div style="background:#e3f2fd; padding:12px 16px; border-radius:12px; 
+                            margin:12px 0; margin-left:20%; border:1px solid #bbdefb;">
+                    <p style="margin:0;"><strong>👤 You:</strong> {msg}</p>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
-                <div class="bot-message">
-                    <p class="message-content"><strong>🤖 Assistant:</strong> {msg}</p>
+                <div style="background:#f5f5f5; padding:12px 16px; border-radius:12px; 
+                            margin:12px 0; margin-right:20%; border:1px solid #e0e0e0;">
+                    <p style="margin:0;"><strong>🤖 Assistant:</strong> {msg}</p>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        # Welcome message when no chat history
         st.markdown("""
-        <div class="welcome-container">
+        <div style="text-align:center; padding:3rem 1rem; color:#666; margin-top:2rem;">
             <h3>Welcome to Medical AI Assistant</h3>
-            <p>Start a conversation by typing a message below</p>
+            <p>Start a conversation by typing your question below 👇</p>
         </div>
         """, unsafe_allow_html=True)
 
-# -------------------- Fixed Chat Input --------------------
-user_input = st.chat_input("Type your message here...", key="chat_input")
+# ----------------- CHAT INPUT -----------------
+user_input = st.chat_input("Type your message here...", key="main_chat_input")
 
 if user_input:
-    # Add user message to chat
+    # Show user message immediately
     st.session_state.chat_history.append(("user", user_input))
-    
-    # Process the query
+    st.rerun()
+
+# ----------------- PROCESS NEW MESSAGE -----------------
+if st.session_state.chat_history and st.session_state.chat_history[-1][0] == "user":
+    last_user_input = st.session_state.chat_history[-1][1]
+
     with st.spinner("🤖 Processing your request..."):
         try:
-            result = agent_app.invoke({"query": user_input})
-            print("DEBUG result:", result)  # 👈 log output in terminal
-            
-            if not isinstance(result, dict):
-                raise ValueError(f"Unexpected result type: {type(result)} -> {result}")
+            # Save user query into memory
+            memory.save_context({"input": last_user_input}, {"output": ""})
 
-            bot_reply = result.get("response", "⚠️ No response key in result")
+            # Call agent
+            result = agent_app.invoke({
+                "query": last_user_input,
+                "conversation": memory.load_memory_variables({}).get("history", "")
+            })
+
+            # Normalize output
+            if isinstance(result, dict):
+                bot_reply = result.get("response") or result.get("output") or str(result)
+            else:
+                bot_reply = str(result)
+
+            # Save response to memory + UI
+            memory.save_context({"input": last_user_input}, {"output": bot_reply})
             st.session_state.chat_history.append(("bot", bot_reply))
 
         except Exception as e:
             import traceback
-            print("ERROR TRACE:", traceback.format_exc())  # 👈 full error in terminal
-            error_msg = f"❌ Error: {str(e)}"
-            st.session_state.chat_history.append(("bot", error_msg))
+            print("ERROR TRACE:", traceback.format_exc())
+            bot_reply = f"❌ Error: {str(e)}"
+            st.session_state.chat_history.append(("bot", bot_reply))
 
-    
-    # Rerun to update the chat display
     st.rerun()

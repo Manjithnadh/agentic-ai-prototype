@@ -33,6 +33,7 @@ def create_vectorstore(folder_path: str):
     return FAISS.from_documents(all_chunks,embeddings)
 
 def build_qa(vectorstore):
+    
     llm = ChatOpenAI(model="gpt-4o-mini", temperature= 0, api_key=os.getenv("OPENAI_API_KEY"))
     retriever = vectorstore.as_retriever(search_kwargs={"k":3})
     return RetrievalQA.from_chain_type(llm = llm, retriever=retriever)
@@ -40,7 +41,7 @@ def build_qa(vectorstore):
 # if __name__ == "__main__":
 #     folder = "uploaded_files" 
 #     vectorstore = create_vectorstore(folder)
-#     qa = build_qa(vectorstore)
+#     qa = qa_chain(folder)
 
 #     print("Chat ready! Type 'exit' to quit.")
 #     while True:

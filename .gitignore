@@ -1,8 +1,7 @@
-.env*
 venv/
-faiss_index/
-.git/
-.idea/
+.env*
+__pychache__/
 uploaded_files/
-__pycache__/
+faiss_index/
 .idea/
+

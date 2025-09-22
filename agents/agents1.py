@@ -6,7 +6,7 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
 from tools.db_tool import agent_executor
-from tools.RAG_tool import get_qa_chain
+from tools.RAG_tool import qa_chain
 from tools.Fallback_tool import fallback_chain
 
 load_dotenv()

@@ -6,7 +6,7 @@ except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
     
 import streamlit as st
-from agents.agents1 import app as agent_app, set_qa_chain
+from agents.agents1 import app as agent_app, qa_chain
 
 # -------------------- Streamlit Page Setup --------------------
 st.set_page_config(
@@ -129,13 +129,13 @@ with st.sidebar:
 
     if uploaded_file:
         with st.spinner("Processing document..."):
-            os.makedirs("uploaded_files", exist_ok=True)
-            file_path = os.path.join("uploaded_files", uploaded_file.name)
+            os.makedirs("tools/uploaded_files", exist_ok=True)
+            file_path = os.path.join("tools/uploaded_files", uploaded_file.name)
 
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
 
-            set_qa_chain(file_path)
+            qa_chain("tools/uploaded_files")
         
         st.success(f"✅ **{uploaded_file.name}** uploaded successfully")
     

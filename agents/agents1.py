@@ -39,15 +39,21 @@ def route_node(state):
 
    Decide the correct route:
 
-        - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, top rated drugs, 
-                filtering or numeric queries that can be answered from the structured database/CSV/tables.
+            - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, 
+                top rated drugs, filtering, or numeric queries that can be answered 
+                from the structured database/CSV/tables.
 
-        - "rag" → if the user asks about uploaded documents (PDF/TXT/DOCX), resumes, reports, research papers, 
-                or any unstructured text that is not part of the structured database. and it is part of the uploaded documents
-                Examples: "what is in the resume", "summarize the document", "explain section 2 of the paper".
+            - "rag" → if uploaded documents (PDF/TXT/DOCX) are available AND the query 
+                could reasonably be answered from those documents. 
+                This includes cases where the user does not explicitly mention 
+                the file but asks questions like “summarize this”, 
+                “what does it say about X”, or “explain section 2”. 
+                In general, if the query relates to content that might exist 
+                inside the uploaded documents, choose RAG.
 
-        - "fallback" → if the query is chit-chat,not related to both the tools present or completely 
-                    unrelated to medicines or uploaded documents.
+            - "fallback" → only if neither the SQL tool nor the RAG tool can provide 
+               a relevant answer to the query (e.g., pure chit-chat, 
+               completely unrelated topics).
 
             Respond with only one: sql, rag, or fallback.
              """)

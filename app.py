@@ -24,6 +24,8 @@ with st.sidebar:
         type=["pdf", "txt", "docx"],
         accept_multiple_files=True
     )
+    if os.path.exists("uploaded_files") and not os.listdir("uploaded_files"):
+        os.rmdir("uploaded_files")
 
     if uploaded_files:
         os.makedirs("uploaded_files", exist_ok=True)
@@ -39,8 +41,13 @@ with st.sidebar:
         # ✅ Use your functions from RAG_tool
             vectorstore = create_vectorstore("uploaded_files")
             st.write("Number of chunks in vectorstore:", len(vectorstore.docstore._dict))# returns FAISS
-            qa = build_qa(vectorstore)                            # returns RetrievalQA
-            st.session_state.qa_chain = qa
+            st.session_state.vectorstore= vectorstore
+            st.session_state.qa_chain = build_qa(vectorstore)
+
+            for uploaded_file in uploaded_files:
+                file_path = os.path.join("uploaded_files", uploaded_file.name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
             
         
         st.success(f"✅ Uploaded {len(saved_paths)} files successfully")

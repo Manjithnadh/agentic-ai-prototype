@@ -34,7 +34,7 @@ def create_vectorstore(folder_path: str):
 
 def build_qa(vectorstore):
     
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature= 0, api_key=os.getenv("OPENAI_API_KEY"))
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature= 0.3, api_key=os.getenv("OPENAI_API_KEY"))
     retriever = vectorstore.as_retriever(search_kwargs={"k":3})
     return RetrievalQA.from_chain_type(llm = llm, retriever=retriever)
 

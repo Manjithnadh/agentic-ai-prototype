@@ -46,7 +46,7 @@ def route_node(state):
                 or any unstructured text that is not part of the structured database. and it is part of the uploaded documents
                 Examples: "what is in the resume", "summarize the document", "explain section 2 of the paper".
 
-        - "fallback" → if the query is chit-chat, personal questions,not related to both the tools present or completely 
+        - "fallback" → if the query is chit-chat,not related to both the tools present or completely 
                     unrelated to medicines or uploaded documents.
 
             Respond with only one: sql, rag, or fallback.

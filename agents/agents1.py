@@ -1,147 +1,103 @@
 import os
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import LLMChain
 from langchain_core.prompts import PromptTemplate
-from tools.db_tool import agent_executor
-from tools.RAG_tool import qa_chain
-from tools.Fallback_tool import fallback_chain
+from langchain_core.output_parsers import StrOutputParser
+from tools.RAG_tool import build_qa
+import streamlit as st
+
+# Import your existing tools
+from tools.db_tool import agent_executor, query_sqlite_db
+from tools.Fallback_tool import fallback_agent
 
 load_dotenv()
 
-
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0,api_key=os.getenv("GOOGLE_API_KEY"))
-  
-
-memory = ConversationSummaryBufferMemory(
-    llm=llm,
-    memory_key="chat_history", 
-    return_messages=True,
-    max_token_limit=2000  # Prevents memory from growing too large
+# Initialize LLM
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0,
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 
-def get_chat_history_text():
-    """Safely extract chat history as text with error handling."""
+# Initialize memory
+memory = ConversationSummaryBufferMemory(
+    llm=llm,
+    max_token_limit=1000,
+    return_messages=True
+)
+# Router function
+def route_node(state):
+    conversation = memory.load_memory_variables({}).get("history", "")
+    
+    prompt = PromptTemplate.from_template("""
+    You are a routing agent for a medicine information system. Consider the conversation so far:
+    {conversation}
+
+    User just asked: {query}
+
+   Decide the correct route:
+
+        - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, top rated drugs, 
+                filtering or numeric queries that can be answered from the structured database/CSV/tables.
+
+        - "rag" → if the user asks about uploaded documents (PDF/TXT/DOCX), resumes, reports, research papers, 
+                or any unstructured text that is not part of the structured database. 
+                Examples: "what is in the resume", "summarize the document", "explain section 2 of the paper".
+
+        - "fallback" → if the query is chit-chat, personal questions (e.g. "who is Manjith"), or completely 
+                    unrelated to medicines or uploaded documents.
+
+            Respond with only one: sql, rag, or fallback.
+             """)
+    
+    chain = prompt | llm | StrOutputParser()
+    decision = chain.invoke({
+        "query": state["query"],
+        "conversation": conversation
+    })
+    return {"decision": decision.strip().lower(), "query": state["query"],"conversation": conversation}
+
+# Node functions
+def sql_node(state):
+    
+    user_query = state.get("query")
+    conversation = state.get("conversation", "")
     try:
-        memory_vars = memory.load_memory_variables({})
-        chat_history = memory_vars.get("chat_history", [])
-        
-        history_text = ""
-        for msg in chat_history:
-            if hasattr(msg, 'content'):
-                history_text += f"{msg.content}\n"
-            elif isinstance(msg, dict) and 'content' in msg:
-                history_text += f"{msg['content']}\n"
-            else:
-                 history_text += f"{str(msg)}\n"
-        
-        return history_text.strip()
+        result =  query_sqlite_db(f"Conversation: {conversation}\nQuestion: {user_query}")
+        return {"response": result}
     except Exception as e:
-        print(f"Memory error: {e}")
-        return ""
-
-
-qa_chain = None
-
-
-def set_qa_chain(file_path):
-    global qa_chain
-    qa_chain = get_qa_chain(file_path=file_path)
-
-
-
-def router(state: dict):
-    query = state.get("query", "").lower()
-
-    # Keywords tied to your medicine database schema
-    sql_keywords = [
-        "medicine", "drug", "tablet", "injection", "capsule",
-        "composition", "uses", "side effect", "side_effects",
-        "manufacturer", "review", "rating", "percentage", 
-        "efficacy", "best", "drugs", "fever", "cancer", "dose", "dosage"
-    ]
-
-    # ✅ Force all medicine-related queries → SQL first
-    if any(word in query for word in sql_keywords):
-        return "sql"
-
-    # ✅ If not medicine-related but file uploaded → RAG
-    if qa_chain is not None:
-        test_answer = qa_chain.run(query)
-        if test_answer and "not found" not in test_answer.lower() and "don't know" not in test_answer.lower():
-            return "rag"
-
-    # ✅ Everything else → fallback
-    return "fallback"
-
-
-def route_node(state: dict):
-    """Pass-through node so state stays a dict with 'query'."""
-    return state
-
-
-# -------------------- Agent Nodes --------------------
+        return {"response": f"SQL Error: {e}"}
 
 def rag_node(state):
-    """RAG Agent node with auto-fallback when answer is not found."""
-    if qa_chain is None:
-        return {"response": "Please upload a document first using the upload feature."}
+    qa = st.session_state.get("qa_chain")
+    if not qa:
+        return {"response": "No QA chain available. Upload documents first."}
 
-    try:
-        history_text = get_chat_history_text()
-        enhanced_query = f"Based on our conversation: {history_text}\n\nNow: {state['query']}"
-        response = qa_chain.run(enhanced_query)
-
-        # ✅ Detect failure
-        if not response.strip() or "don't know" in response.lower() or "not found" in response.lower() or "cannot answer" in response.lower():
-            # Check if it's drug-related → SQL
-            drug_keywords = ["medicine", "drug", "tablet", "capsule", "injection", "review", "rating", "side effect", "composition", "uses", "manufacturer", "best"]
-            if any(word in state["query"].lower() for word in drug_keywords):
-                return sql_node(state)
-            else:
-                return fallback_node(state)
-
-        memory.save_context({"input": state["query"]}, {"output": response})
-        return {"response": response}
-
-    except Exception as e:
-        return {"response": f"Error processing your document query: {str(e)}"}
-
-
-
-def sql_node(state):
-    """SQL Agent node with enhanced error handling and context."""
-    try:
-        history_text = get_chat_history_text()
-        prompt = f"Context from previous conversation:\n{history_text}\n\nCurrent query: {state['query']}"
-        
-        response = agent_executor.run({"input": prompt})
-        
-        memory.save_context({"input": state["query"]}, {"output": response})
-        return {"response": response}
+    user_query = state.get("query")
+    conversation = state.get("conversation", "")
     
-    except Exception as e:
-        error_msg = f"Sorry, I encountered an error accessing the drug database: {str(e)}"
-        return {"response": error_msg}
+    result = qa.run({
+        "query": f"Conversation: {conversation}\nQuestion: {user_query}"
+    })
 
-
+    return {"response": result}
 
 def fallback_node(state):
-    """Fallback Agent node with context awareness."""
+    user_query = state.get("query")
+    conversation=state.get("conversation","")
     try:
-        history_text = get_chat_history_text()
-        context = f"Conversation history:\n{history_text}\n\nCurrent query: {state['query']}"
-        
-        response = fallback_chain.run(query=context)
-        memory.save_context({"input": state["query"]}, {"output": response})
-        return {"response": response}
-    
+        result = fallback_agent(f"Conversation: {conversation}\nQuestion: {user_query}")
+        return {"response": result}
     except Exception as e:
-        return {"response": "I apologize, I'm having trouble processing your request right now."}
+        return {"response": f"Fallback Error: {e}"}
 
-# -------------------- Build Graph --------------------
+# Router conditional function
+def router(state):
+    return state["decision"]
+
+# Build the graph
 graph = StateGraph(dict)
 graph.add_node("router", route_node)
 graph.add_node("sql", sql_node)
@@ -150,7 +106,8 @@ graph.add_node("fallback", fallback_node)
 
 graph.set_entry_point("router")
 graph.add_conditional_edges(
-    "router", router,
+    "router",
+    router,
     {
         "sql": "sql",
         "rag": "rag",
@@ -166,11 +123,19 @@ app = graph.compile()
 
 # -------------------- Run (CLI mode) --------------------
 if __name__ == "__main__":
-    print("🤖 Bot is ready! Type 'exit' to quit.")
+    print("🤖 Medicine Query Bot is ready! Type 'exit' to quit.")
     while True:
         q = input("\nYou: ")
         if q.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
+        
+        # Update memory
+        memory.save_context({"input": q}, {"output": ""})
+        
+        # Get response
         result = app.invoke({"query": q})
         print("Bot:", result["response"])
+        
+        # Update memory with response
+        memory.save_context({"input": q}, {"output": result["response"]})

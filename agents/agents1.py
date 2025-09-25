@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from tools.RAG_tool import build_qa
+from tools.RAG_tool import build_qa,rag_session
 import streamlit as st
 
 # Import your existing tools
@@ -39,15 +39,21 @@ def route_node(state):
 
    Decide the correct route:
 
-        - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, top rated drugs, 
-                filtering or numeric queries that can be answered from the structured database/CSV/tables.
+            - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, 
+                top rated drugs, filtering, or numeric queries that can be answered 
+                from the structured database/CSV/tables.
 
-        - "rag" → if the user asks about uploaded documents (PDF/TXT/DOCX), resumes, reports, research papers, 
-                or any unstructured text that is not part of the structured database. 
-                Examples: "what is in the resume", "summarize the document", "explain section 2 of the paper".
+            - "rag" → if uploaded documents (PDF/TXT/DOCX) are available AND the query 
+                could reasonably be answered from those documents. 
+                This includes cases where the user does not explicitly mention 
+                the file but asks questions like “summarize this”, 
+                “what does it say about X”, or “explain section 2”. 
+                In general, if the query relates to content that might exist 
+                inside the uploaded documents, choose RAG.
 
-        - "fallback" → if the query is chit-chat, personal questions (e.g. "who is Manjith"), or completely 
-                    unrelated to medicines or uploaded documents.
+            - "fallback" → only if neither the SQL tool nor the RAG tool can provide 
+               a relevant answer to the query (e.g., pure chit-chat, 
+               completely unrelated topics).
 
             Respond with only one: sql, rag, or fallback.
              """)
@@ -71,18 +77,27 @@ def sql_node(state):
         return {"response": f"SQL Error: {e}"}
 
 def rag_node(state):
-    qa = st.session_state.get("qa_chain")
+    # Prefer session_state QA chain if it exists
+    qa = st.session_state.get("qa_chain") or rag_session.qa_chain
     if not qa:
         return {"response": "No QA chain available. Upload documents first."}
 
     user_query = state.get("query")
-    conversation = state.get("conversation", "")
-    
-    result = qa.run({
-        "query": f"Conversation: {conversation}\nQuestion: {user_query}"
-    })
+    try:
+        # Use invoke instead of run (deprecated)
+        result = qa.invoke({"query": user_query})
+        # The result structure might be different - try different keys
+        if isinstance(result, dict):
+            # Try common keys used by RetrievalQA
+            response = result.get("result") or result.get("output") or str(result)
+        else:
+            response = str(result)
+        return {"response": response}
+    except Exception as e:
+        return {"response": f"RAG Error: {e}"}
 
-    return {"response": result}
+
+
 
 def fallback_node(state):
     user_query = state.get("query")

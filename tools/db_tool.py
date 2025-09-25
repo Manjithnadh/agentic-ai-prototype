@@ -92,7 +92,6 @@ agent_executor = initialize_agent(
     tools=tools,
     llm=llm,
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=True,  # Set to True to see the agent's thought process
     handle_parsing_errors=True,
     max_iterations=5,
     early_stopping_method="generate",

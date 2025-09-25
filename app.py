@@ -1,9 +1,7 @@
 import os
-
-
 import streamlit as st
 from agents.agents1 import app as agent_app, memory
-from tools.RAG_tool import  create_vectorstore,build_qa  # ✅ use qa_chain
+from tools.RAG_tool import create_vectorstore, build_qa, rag_session  # ✅ use qa_chain
 from langchain_openai import ChatOpenAI
 
 # ----------------- PAGE CONFIG -----------------
@@ -24,33 +22,33 @@ with st.sidebar:
         type=["pdf", "txt", "docx"],
         accept_multiple_files=True
     )
-    if os.path.exists("uploaded_files") and not os.listdir("uploaded_files"):
-        os.rmdir("uploaded_files")
-
+    UPLOAD_DIR = "tools/uploaded_files"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     if uploaded_files:
-        os.makedirs("uploaded_files", exist_ok=True)
-        saved_paths = []
-
         for uploaded_file in uploaded_files:
-            file_path = os.path.join("uploaded_files", uploaded_file.name)
+            file_path = os.path.join(UPLOAD_DIR, uploaded_file.name)
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
-            saved_paths.append(file_path)
-            
 
-        # ✅ Use your functions from RAG_tool
-            vectorstore = create_vectorstore("uploaded_files")
-            st.write("Number of chunks in vectorstore:", len(vectorstore.docstore._dict))# returns FAISS
-            st.session_state.vectorstore= vectorstore
-            st.session_state.qa_chain = build_qa(vectorstore)
+        try:
+            rag_session.initialize(UPLOAD_DIR)
+            st.write(f"✅ Vectorstore created: {rag_session.vectorstore is not None}")
+            st.write(f"✅ QA chain created: {rag_session.qa_chain is not None}")
 
-            for uploaded_file in uploaded_files:
-                file_path = os.path.join("uploaded_files", uploaded_file.name)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            
-        
-        st.success(f"✅ Uploaded {len(saved_paths)} files successfully")
+            # Test a simple query
+            test_result = rag_session.query("Test question")
+            st.write(f"✅ Test query works: {len(test_result)} characters")
+
+        except Exception as e:
+            st.error(f"❌ Direct RAG test failed: {e}")
+        rag_session.initialize(UPLOAD_DIR)
+
+    # ✅ Link QA chain to session_state so router sees it
+    rag_session.vectorstore = create_vectorstore(UPLOAD_DIR)
+    rag_session.qa_chain = build_qa(rag_session.vectorstore)
+
+    st.success(f"✅ Uploaded {len(uploaded_files)} files successfully")
+    print("QA chain ready:", rag_session.qa_chain is not None)
 
     st.markdown("---")
     st.markdown("#### ℹ️ System Info")
@@ -122,14 +120,21 @@ if st.session_state.chat_history and st.session_state.chat_history[-1][0] == "us
 
     with st.spinner("🤖 Processing your request..."):
         try:
-            # Save user query into memory
-            memory.save_context({"input": last_user_input}, {"output": ""})
+            print("QA chain exists:", st.session_state.get("qa_chain") is not None)
+            print("User question:", last_user_input)
 
-            # Call agent
+            # Debug: Check what documents are available
+            if os.path.exists(UPLOAD_DIR):
+                files = os.listdir(UPLOAD_DIR)
+                print("Uploaded files:", files)
+
             result = agent_app.invoke({
                 "query": last_user_input,
                 "conversation": memory.load_memory_variables({}).get("history", "")
             })
+
+            print("Raw agent output:", result)
+            print("Output type:", type(result))
 
             # Normalize output
             if isinstance(result, dict):
@@ -143,6 +148,7 @@ if st.session_state.chat_history and st.session_state.chat_history[-1][0] == "us
 
         except Exception as e:
             import traceback
+
             print("ERROR TRACE:", traceback.format_exc())
             bot_reply = f"❌ Error: {str(e)}"
             st.session_state.chat_history.append(("bot", bot_reply))

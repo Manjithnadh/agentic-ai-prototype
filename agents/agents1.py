@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from tools.RAG_tool import build_qa
+from tools.RAG_tool import build_qa, rag_session
 import streamlit as st
 
 # Import your existing tools
@@ -27,10 +27,12 @@ memory = ConversationSummaryBufferMemory(
     max_token_limit=1000,
     return_messages=True
 )
+
+
 # Router function
 def route_node(state):
     conversation = memory.load_memory_variables({}).get("history", "")
-    
+
     prompt = PromptTemplate.from_template("""
     You are a routing agent for a medicine information system. Consider the conversation so far:
     {conversation}
@@ -39,75 +41,92 @@ def route_node(state):
 
    Decide the correct route:
 
-            - "sql" → if the user asks about medicines, drugs, dosages, side effects, conditions, 
-                top rated drugs, filtering, or numeric queries that can be answered 
-                from the structured database/CSV/tables.
+            You are a routing AI deciding which tool to use. The available tools are:
 
-            - "rag" → if uploaded documents (PDF/TXT/DOCX) are available AND the query 
-                could reasonably be answered from those documents. 
-                This includes cases where the user does not explicitly mention 
-                the file but asks questions like “summarize this”, 
-                “what does it say about X”, or “explain section 2”. 
-                In general, if the query relates to content that might exist 
-                inside the uploaded documents, choose RAG.
-
-            - "fallback" → only if neither the SQL tool nor the RAG tool can provide 
-               a relevant answer to the query (e.g., pure chit-chat, 
-               completely unrelated topics).
+            1. Tool Name: Medicine Database Query Tool
+               Description: Contains detailed data about medicines, including:
+               - Medicine Name
+               - Composition
+               - Uses
+               - Side effects
+               - Image URL
+               - Manufacturer
+               - Excellent Review %, Average Review %, Poor Review %
+               Rules: Use this tool ONLY if the user's query is specifically about medicines, their uses, side effects, composition, manufacturer, or ratings.
+            
+            2. Tool Name: RAG Document Query Tool
+               Description: Retrieves answers from uploaded PDFs or text documents using a vectorstore. Can answer detailed questions about content in these documents.
+               Rules: Use this tool for queries about information in uploaded documents or general knowledge provided in your RAG system.
+            
+            3. Tool Name: Fallback Agent
+               Description: Handles queries unrelated to medicines or uploaded documents. Gives polite responses to greetings or out-of-scope questions.
+               Rules: Activate this tool ONLY if the query is unrelated to medicines or uploaded documents.
+            
+            
+          
 
             Respond with only one: sql, rag, or fallback.
              """)
-    
+
     chain = prompt | llm | StrOutputParser()
     decision = chain.invoke({
         "query": state["query"],
         "conversation": conversation
     })
-    return {"decision": decision.strip().lower(), "query": state["query"],"conversation": conversation}
+    return {"decision": decision.strip().lower(), "query": state["query"], "conversation": conversation}
+
 
 # Node functions
 def sql_node(state):
-    
     user_query = state.get("query")
     conversation = state.get("conversation", "")
     try:
-        result =  query_sqlite_db(f"Conversation: {conversation}\nQuestion: {user_query}")
+        result = query_sqlite_db(f"Conversation: {conversation}\nQuestion: {user_query}")
         return {"response": result}
     except Exception as e:
         return {"response": f"SQL Error: {e}"}
 
+
 def rag_node(state):
-    qa = st.session_state.get("qa_chain")
+    # Check if we have a QA chain
+    qa = st.session_state.get("qa_chain") or rag_session.qa_chain
+
     if not qa:
-        return {"response": "No QA chain available. Upload documents first."}
+        # Try to initialize RAG if vectorstore exists but QA chain is missing
+        if rag_session.vectorstore and not rag_session.qa_chain:
+            qa = build_qa(rag_session.vectorstore)
+            rag_session.qa_chain = qa
+            st.session_state["qa_chain"] = qa
+
+    if not qa:
+        return {"response": "No documents available. Please upload files first."}
 
     user_query = state.get("query")
-    conversation = state.get("conversation", "")
-    
-    
-
-    result = qa.run({
-        "query": f"Please answer using the uploaded documents.\nConversation: {conversation}\nQuestion: {user_query}"
-    })
-
-   
-    return {"response": result}
-
-
+    try:
+        result = qa.invoke({"query": user_query})
+        if isinstance(result, dict):
+            response = result.get("result") or result.get("output") or str(result)
+        else:
+            response = str(result)
+        return {"response": response}
+    except Exception as e:
+        return {"response": f"RAG Error: {e}"}
 
 
 def fallback_node(state):
     user_query = state.get("query")
-    conversation=state.get("conversation","")
+    conversation = state.get("conversation", "")
     try:
         result = fallback_agent(f"Conversation: {conversation}\nQuestion: {user_query}")
         return {"response": result}
     except Exception as e:
         return {"response": f"Fallback Error: {e}"}
 
+
 # Router conditional function
 def router(state):
     return state["decision"]
+
 
 # Build the graph
 graph = StateGraph(dict)
@@ -141,13 +160,13 @@ if __name__ == "__main__":
         if q.lower() in ["exit", "quit"]:
             print("Goodbye!")
             break
-        
+
         # Update memory
         memory.save_context({"input": q}, {"output": ""})
-        
+
         # Get response
         result = app.invoke({"query": q})
         print("Bot:", result["response"])
-        
+
         # Update memory with response
         memory.save_context({"input": q}, {"output": result["response"]})

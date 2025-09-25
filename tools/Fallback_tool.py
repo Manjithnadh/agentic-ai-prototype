@@ -23,7 +23,7 @@ The user said: "{query}"
 
 Rules:
 - If the message is a greeting or wish (hi, hello, hey, good morning, good night, happy birthday, etc.), reply politely with a suitable greeting or wish back.
-- If the message is not about medicines, drugs, greetings, or wishing, always respond with:
+- If the message is not about medicines, drugs, greetings, or wishing, or RAG node always respond with:
   Im sorry, I can only answer queries related to medicines or drug information.
 """
 )

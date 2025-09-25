@@ -1,6 +1,4 @@
 import os
-
-
 import streamlit as st
 from agents.agents1 import app as agent_app, memory
 from tools.RAG_tool import  create_vectorstore,build_qa, rag_session  # ✅ use qa_chain
@@ -32,11 +30,22 @@ with st.sidebar:
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
         
-    # Initialize RAG session
+        try:
+            rag_session.initialize(UPLOAD_DIR)
+            st.write(f"✅ Vectorstore created: {rag_session.vectorstore is not None}")
+            st.write(f"✅ QA chain created: {rag_session.qa_chain is not None}")
+        
+        # Test a simple query
+            test_result = rag_session.query("Test question")
+            st.write(f"✅ Test query works: {len(test_result)} characters")
+        
+        except Exception as e:
+            st.error(f"❌ Direct RAG test failed: {e}")
         rag_session.initialize(UPLOAD_DIR)
 
     # ✅ Link QA chain to session_state so router sees it
-        st.session_state["qa_chain"] = rag_session.qa_chain
+    rag_session.vectorstore = create_vectorstore(UPLOAD_DIR)
+    rag_session.qa_chain = build_qa(rag_session.vectorstore)
 
     st.success(f"✅ Uploaded {len(uploaded_files)} files successfully")
     print("QA chain ready:", rag_session.qa_chain is not None)

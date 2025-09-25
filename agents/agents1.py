@@ -77,18 +77,23 @@ def sql_node(state):
         return {"response": f"SQL Error: {e}"}
 
 def rag_node(state):
-    # Prefer session_state QA chain if it exists
+    # Check if we have a QA chain
     qa = st.session_state.get("qa_chain") or rag_session.qa_chain
+    
     if not qa:
-        return {"response": "No QA chain available. Upload documents first."}
+        # Try to initialize RAG if vectorstore exists but QA chain is missing
+        if rag_session.vectorstore and not rag_session.qa_chain:
+            qa = build_qa(rag_session.vectorstore)
+            rag_session.qa_chain = qa
+            st.session_state["qa_chain"] = qa
+    
+    if not qa:
+        return {"response": "No documents available. Please upload files first."}
 
     user_query = state.get("query")
     try:
-        # Use invoke instead of run (deprecated)
         result = qa.invoke({"query": user_query})
-        # The result structure might be different - try different keys
         if isinstance(result, dict):
-            # Try common keys used by RetrievalQA
             response = result.get("result") or result.get("output") or str(result)
         else:
             response = str(result)

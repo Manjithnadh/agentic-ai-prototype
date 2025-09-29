@@ -43,13 +43,10 @@ def route_node(state):
                 top rated drugs, filtering, or numeric queries that can be answered 
                 from the structured database/CSV/tables.
 
-            - "rag" → if uploaded documents (PDF/TXT/DOCX) are available AND the query 
-                could reasonably be answered from those documents. 
-                This includes cases where the user does not explicitly mention 
-                the file but asks questions like “summarize this”, 
-                “what does it say about X”, or “explain section 2”. 
-                In general, if the query relates to content that might exist 
-                inside the uploaded documents, choose RAG.
+            - "rag" → if the user asks about uploaded documents, files, summaries, content from files,
+                or any question that could be answered from the uploaded PDF/TXT documents.
+                This includes: "summary all files", "who is [name] from the files", 
+                "what does the document say about X", "explain the content", etc
 
             - "fallback" → only if neither the SQL tool nor the RAG tool can provide 
                a relevant answer to the query (e.g., pure chit-chat, 

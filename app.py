@@ -39,16 +39,6 @@ with st.sidebar:
             del st.session_state["retriever"]
             del st.session_state["upload_files"]
 
-    # Document-specific question section
-    st.markdown("---")
-    st.markdown("#### 📝 Ask about Documents")
-    doc_query = st.text_input("Ask question about the uploaded files")
-    
-    if doc_query and "retriever" in st.session_state:
-        with st.spinner("🔍 Searching in documents..."):
-            doc_answer = ask_ai(st.session_state["retriever"], doc_query)
-        st.write("### Document Answer:")
-        st.write(doc_answer)
     
     st.markdown("---")
     st.markdown("#### ℹ️ System Info")

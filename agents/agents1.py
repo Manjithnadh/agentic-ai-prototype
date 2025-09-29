@@ -5,7 +5,7 @@ from langgraph.graph import StateGraph, END
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from tools.RAG_tool import build_qa,rag_session
+from tools.RAG_tool import ask_ai
 import streamlit as st
 
 # Import your existing tools
@@ -77,32 +77,25 @@ def sql_node(state):
         return {"response": f"SQL Error: {e}"}
 
 def rag_node(state):
-    # Check if we have a QA chain
-    qa = st.session_state.get("qa_chain") or rag_session.qa_chain
+    # Use the retriever from session state (from Streamlit app)
+    retriever = None
     
-    if not qa:
-        # Try to initialize RAG if vectorstore exists but QA chain is missing
-        if rag_session.vectorstore and not rag_session.qa_chain:
-            qa = build_qa(rag_session.vectorstore)
-            rag_session.qa_chain = qa
-            st.session_state["qa_chain"] = qa
+    # Try to get retriever from different possible sources
+    if "retriever" in st.session_state:
+        retriever = st.session_state["retriever"]
+    elif hasattr(state, 'get') and state.get("retriever"):
+        retriever = state.get("retriever")
     
-    if not qa:
+    if not retriever:
         return {"response": "No documents available. Please upload files first."}
 
     user_query = state.get("query")
     try:
-        result = qa.invoke({"query": user_query})
-        if isinstance(result, dict):
-            response = result.get("result") or result.get("output") or str(result)
-        else:
-            response = str(result)
-        return {"response": response}
+        # Use your existing ask_ai function
+        result = ask_ai(retriever, user_query)
+        return {"response": result}
     except Exception as e:
         return {"response": f"RAG Error: {e}"}
-
-
-
 
 def fallback_node(state):
     user_query = state.get("query")

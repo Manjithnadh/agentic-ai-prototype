@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from agents.agents1 import app as agent_app, memory
-from tools.RAG_tool import  create_vectorstore,build_qa, rag_session  # ✅ use qa_chain
+from tools.RAG_tool import create_faiss, ask_ai  # ✅ use qa_chain
 from langchain_openai import ChatOpenAI
 
 # ----------------- PAGE CONFIG -----------------
@@ -17,39 +17,39 @@ with st.sidebar:
     st.markdown("### ⚙️ System Configuration")
 
     st.markdown("#### 📄 Document Upload")
-    uploaded_files = st.file_uploader(
-        "Upload PDF/TXT/DOCX files for document queries",
-        type=["pdf", "txt", "docx"],
+    upload_files = st.file_uploader(
+        "Upload PDF or TXT files",
+        type=["pdf","txt"],
         accept_multiple_files=True
     )
-    UPLOAD_DIR = "tools/uploaded_files"
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            file_path = os.path.join(UPLOAD_DIR, uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-        
-        try:
-            rag_session.initialize(UPLOAD_DIR)
-            st.write(f"✅ Vectorstore created: {rag_session.vectorstore is not None}")
-            st.write(f"✅ QA chain created: {rag_session.qa_chain is not None}")
-        
-        # Test a simple query
-            test_result = rag_session.query("Test question")
-            st.write(f"✅ Test query works: {len(test_result)} characters")
-        
-        except Exception as e:
-            st.error(f"❌ Direct RAG test failed: {e}")
-        rag_session.initialize(UPLOAD_DIR)
 
-    # ✅ Link QA chain to session_state so router sees it
-    rag_session.vectorstore = create_vectorstore(UPLOAD_DIR)
-    rag_session.qa_chain = build_qa(rag_session.vectorstore)
+    # Get current file names
+    current_file_names = [f.name for f in upload_files] if upload_files else []
 
-    st.success(f"✅ Uploaded {len(uploaded_files)} files successfully")
-    print("QA chain ready:", rag_session.qa_chain is not None)
+    # Check if we need to rebuild embeddings (files changed)
+    if ("retriever" not in st.session_state or st.session_state.get("upload_files") != current_file_names):
+        
+        if upload_files:
+            with st.spinner("📚 Processing documents..."):
+                st.session_state["retriever"] = create_faiss(upload_files)
+                st.session_state["upload_files"] = current_file_names
+                st.success(f"✅ Processed {len(upload_files)} file(s)")
+        elif "retriever" in st.session_state:
+            # Clear retriever if all files are removed
+            del st.session_state["retriever"]
+            del st.session_state["upload_files"]
 
+    # Document-specific question section
+    st.markdown("---")
+    st.markdown("#### 📝 Ask about Documents")
+    doc_query = st.text_input("Ask question about the uploaded files")
+    
+    if doc_query and "retriever" in st.session_state:
+        with st.spinner("🔍 Searching in documents..."):
+            doc_answer = ask_ai(st.session_state["retriever"], doc_query)
+        st.write("### Document Answer:")
+        st.write(doc_answer)
+    
     st.markdown("---")
     st.markdown("#### ℹ️ System Info")
     st.caption("""
@@ -103,6 +103,7 @@ with chat_container:
         <div style="text-align:center; padding:3rem 1rem; color:#666; margin-top:2rem;">
             <h3>Welcome to Medical AI Assistant</h3>
             <p>Start a conversation by typing your question below 👇</p>
+            <p><small>You can also upload documents in the sidebar and ask questions about them</small></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -124,14 +125,28 @@ if st.session_state.chat_history and st.session_state.chat_history[-1][0] == "us
             print("User question:", last_user_input)
 
             # Debug: Check what documents are available
-            if os.path.exists(UPLOAD_DIR):
-                files = os.listdir(UPLOAD_DIR)
-                print("Uploaded files:", files)
+            if "upload_files" in st.session_state:
+                print("Uploaded files:", st.session_state["upload_files"])
             
-            result = agent_app.invoke({
+            # Check if RAG is available for document queries
+            rag_context = ""
+            if "retriever" in st.session_state:
+                try:
+                    # Get relevant document context for the agent
+                    rag_context = ask_ai(st.session_state["retriever"], last_user_input)
+                    print("RAG context found:", bool(rag_context))
+                except Exception as rag_error:
+                    print(f"RAG retrieval error: {rag_error}")
+                    rag_context = ""
+
+            # Prepare input for agent
+            agent_input = {
                 "query": last_user_input,
-                "conversation": memory.load_memory_variables({}).get("history", "")
-            })
+                "conversation": memory.load_memory_variables({}).get("history", ""),
+                "rag_context": rag_context
+            }
+
+            result = agent_app.invoke(agent_input)
 
             print("Raw agent output:", result)
             print("Output type:", type(result))
